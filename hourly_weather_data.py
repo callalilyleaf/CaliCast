@@ -26,8 +26,14 @@ locations = [
     (11, 41.722317, -124.2547)
 ]
 
-today_date = datetime.utcnow().strftime('%Y-%m-%d')
 
+# Get today's date in Pacific Time
+pacific_tz = pytz.timezone("America/Los_Angeles")
+today_pacific = datetime.now(pacific_tz).date()  # Ensure it's in the correct timezone
+today_str = today_pacific.strftime('%Y-%m-%d')
+print("Today's date in Pacific Time:", today_str)
+
+# Open-Meteo API parameters
 url = "https://api.open-meteo.com/v1/forecast"
 params = {
     "latitude": [lat for _, lat, _ in locations],
@@ -37,39 +43,38 @@ params = {
         "apparent_temperature", "precipitation_probability", "precipitation",
         "rain", "snowfall", "snow_depth", "weather_code", "pressure_msl", 
         "surface_pressure", "cloud_cover", "cloud_cover_low", "cloud_cover_mid",
-        "cloud_cover_high", "wind_speed_10m", "wind_speed_80m", "wind_speed_120m",
-        "wind_direction_10m", "wind_direction_80m", "wind_direction_120m",
+        "cloud_cover_high", "wind_speed_10m", "wind_direction_10m",
         "wind_gusts_10m", "is_day", "sunshine_duration", "wet_bulb_temperature_2m",
         "boundary_layer_height", "shortwave_radiation"
     ],
-    "timezone": "America/Los_Angeles",
-    "start_date": today_date,
-    "end_date": today_date  
+    "timezone": "UTC",
+    "start_date": today_str,
+    "end_date": today_str
 }
 
 # Fetch data from Open-Meteo
 responses = openmeteo.weather_api(url, params=params)
 
-# Pacific timezone
+# Pacific Timezone
 pacific_tz = pytz.timezone("America/Los_Angeles")
 
 # Process responses for each location
 all_weather_data = []
 
 for i, response in enumerate(responses):
-    print(f"Processing data for Location {i}: {response.Latitude()}°N, {response.Longitude()}°E")
+    print(f" {i}: {response.Latitude()}°N, {response.Longitude()}°E")
 
     hourly = response.Hourly()
     
-    # Convert timestamps to readable format
+    # Convert timestamps to readable format with proper timezone conversion
     time_series = pd.date_range(
-        start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
-        end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
+        start=pd.to_datetime(hourly.Time(), unit="s"),
+        end=pd.to_datetime(hourly.TimeEnd(), unit="s"),
         freq=pd.Timedelta(seconds=hourly.Interval()),
         inclusive="left"
-    ).tz_convert(pacific_tz)
+    ).tz_localize("UTC").tz_convert(pacific_tz)
 
-    # Extract variables in correct order
+    # Extract variables (without unnecessary wind-related variables)
     hourly_data = {
         "location_id": i,
         "time": time_series,
@@ -90,17 +95,13 @@ for i, response in enumerate(responses):
         "cloud_cover_mid": hourly.Variables(14).ValuesAsNumpy(),
         "cloud_cover_high": hourly.Variables(15).ValuesAsNumpy(),
         "wind_speed_10m": hourly.Variables(16).ValuesAsNumpy(),
-        "wind_speed_80m": hourly.Variables(17).ValuesAsNumpy(),
-        "wind_speed_120m": hourly.Variables(18).ValuesAsNumpy(),
-        "wind_direction_10m": hourly.Variables(19).ValuesAsNumpy(),
-        "wind_direction_80m": hourly.Variables(20).ValuesAsNumpy(),
-        "wind_direction_120m": hourly.Variables(21).ValuesAsNumpy(),
-        "wind_gusts_10m": hourly.Variables(22).ValuesAsNumpy(),
-        "is_day": hourly.Variables(23).ValuesAsNumpy(),
-        "sunshine_duration": hourly.Variables(24).ValuesAsNumpy(),
-        "wet_bulb_temperature_2m": hourly.Variables(25).ValuesAsNumpy(),
-        "boundary_layer_height": hourly.Variables(26).ValuesAsNumpy(),
-        "shortwave_radiation": hourly.Variables(27).ValuesAsNumpy(),
+        "wind_direction_10m": hourly.Variables(17).ValuesAsNumpy(),
+        "wind_gusts_10m": hourly.Variables(18).ValuesAsNumpy(),
+        "is_day": hourly.Variables(19).ValuesAsNumpy(),
+        "sunshine_duration": hourly.Variables(20).ValuesAsNumpy(),
+        "wet_bulb_temperature_2m": hourly.Variables(21).ValuesAsNumpy(),
+        "boundary_layer_height": hourly.Variables(22).ValuesAsNumpy(),
+        "shortwave_radiation": hourly.Variables(23).ValuesAsNumpy(),
     }
 
     # Convert to DataFrame
@@ -110,7 +111,7 @@ for i, response in enumerate(responses):
 # Combine all locations into one DataFrame
 final_df = pd.concat(all_weather_data, ignore_index=True)
 
-# Save to CSV (optional)
-final_df.to_csv("hourly_weather_data.csv", index=False)
+# Append to CSV instead of overwriting
+final_df.to_csv("hourly_weather_data.csv", mode="a", index=False, header=not pd.io.common.file_exists("hourly_weather_data.csv"))
 
-print("Hourly weather data saved successfully!")
+

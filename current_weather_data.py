@@ -63,21 +63,21 @@ for i, response in enumerate(responses):
     weather_data.append({
         "location_id": location_id,
         "time": formatted_time,
-        "temperature_2m (°C)": current_weather.Variables(0).Value(),
-        "relative_humidity_2m (%)": current_weather.Variables(1).Value(),
-        "apparent_temperature (°C)": current_weather.Variables(2).Value(),
-        "is_day ()": current_weather.Variables(3).Value(),
-        "precipitation (mm)": current_weather.Variables(4).Value(),
-        "rain (mm)": current_weather.Variables(5).Value(),
-        "showers (mm)": current_weather.Variables(6).Value(),
-        "snowfall (cm)": current_weather.Variables(7).Value(),
-        "weather_code (wmo code)": current_weather.Variables(8).Value(),
-        "cloud_cover (%)": current_weather.Variables(9).Value(),
-        "pressure_msl (hPa)": current_weather.Variables(10).Value(),
-        "surface_pressure (hPa)": current_weather.Variables(11).Value(),
-        "wind_speed_10m (km/h)": current_weather.Variables(12).Value(),
-        "wind_direction_10m (°)": current_weather.Variables(13).Value(),
-        "wind_gusts_10m (km/h)": current_weather.Variables(14).Value(),
+        "temperature_2m": current_weather.Variables(0).Value(), #C
+        "relative_humidity_2m": current_weather.Variables(1).Value(),#%
+        "apparent_temperature": current_weather.Variables(2).Value(), #C
+        "is_day": current_weather.Variables(3).Value(),
+        "precipitation": current_weather.Variables(4).Value(), #mm
+        "rain": current_weather.Variables(5).Value(), #mm
+        "showers": current_weather.Variables(6).Value(), #mm
+        "snowfall": current_weather.Variables(7).Value(), #cm
+        "weather_code": current_weather.Variables(8).Value(), #wmo code
+        "cloud_cover": current_weather.Variables(9).Value(), #%
+        "pressure_msl": current_weather.Variables(10).Value(), #hPa
+        "surface_pressure": current_weather.Variables(11).Value(), #hPa
+        "wind_speed_10m": current_weather.Variables(12).Value(), #km/h
+        "wind_direction_10m": current_weather.Variables(13).Value(), #°
+        "wind_gusts_10m": current_weather.Variables(14).Value(), #km/h
     })
 
     # Debugging output
@@ -93,13 +93,11 @@ weather_df = pd.DataFrame(weather_data)
 weather_df.to_csv("current_weather_data.csv", index=False)
 print("\nCurrent weather data saved to 'current_weather_data.csv'.")
 
-# Append to historical weather data (if exists, append; else create)
-historical_file = "historical_weather_data.csv"
-try:
-    existing_df = pd.read_csv(historical_file)
-    updated_df = pd.concat([existing_df, weather_df], ignore_index=True)
-    updated_df.to_csv(historical_file, index=False)
-except FileNotFoundError:
-    weather_df.to_csv(historical_file, index=False)
-
-print("Historical weather data updated in 'historical_weather_data.csv'.")
+# # Append to historical weather data (if exists, append; else create)
+# historical_file = "historical_weather_data.csv"
+# try:
+#     existing_df = pd.read_csv(historical_file)
+#     updated_df = pd.concat([existing_df, weather_df], ignore_index=True)
+#     updated_df.to_csv(historical_file, index=False)
+# except FileNotFoundError:
+#     weather_df.to_csv(historical_file, index=False)
