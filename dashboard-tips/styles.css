@@ -1,0 +1,50 @@
+.title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+.title-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+:root {
+  --bslib-sidebar-main-bg: #f8f8f8;
+}
+
+.popover {
+  --bs-popover-header-bg: #222;
+  --bs-popover-header-color: #fff;
+}
+
+.popover .btn-close {
+  filter: var(--bs-btn-close-white-filter);
+}
+
+.weather-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  margin: 5px 0;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #f0f0f0;
+  transition: background-color 0.3s ease;
+}
+
+.weather-bar:hover {
+  background-color: #e0e0e0;
+}
+
+.selected {
+  background-color: #3498db !important;
+  color: white;
+}
+
+.weather-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+}
