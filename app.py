@@ -15,10 +15,10 @@ unique_locations = weather_data["location_id"].unique()
 
 # Layout of the dashboard with Tabs
 app.layout = html.Div([
-    html.H1("Current Weather Dashboard", style={'textAlign': 'center'}),
+    html.H1("Weather Dashboard", style={'textAlign': 'center'}),
 
     dcc.Tabs(id="tabs", value="tab1", children=[
-        dcc.Tab(label="Weather Overview", value="tab1"),
+        dcc.Tab(label="Current Weather", value="tab1"),
         dcc.Tab(label="Historical Data", value="tab2"),
         dcc.Tab(label="Prediction Model", value="tab3")
     ]),

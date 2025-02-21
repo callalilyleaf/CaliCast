@@ -10,27 +10,27 @@ cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
 openmeteo = openmeteo_requests.Client(session=retry_session)
 
-# Define locations (ID, Latitude, Longitude)
+# Define locations (ID, Name, Latitude, Longitude)
 locations = [
-    (0, 32.724075, -117.14286),  
-    (1, 32.864674, -114.895966),
-    (2, 33.07557, -116.646194),
-    (3, 33.848858, -116.56289),
-    (4, 34.059753, -118.125),
-    (5, 36.801403, -119.802895),
-    (6, 37.785587, -122.409645),
-    (7, 38.558872, -121.54891),
-    (8, 39.191563, -120.20633),
-    (9, 39.753952, -121.79416),
-    (10, 41.300526, -122.281204),
-    (11, 41.722317, -124.2547)
+    (0, "San Diego", 32.724075, -117.14286),  
+    (1, "Lemoore", 32.864674, -114.895966),
+    (2, "Ramona", 33.07557, -116.646194),
+    (3, "Palm Springs", 33.848858, -116.56289),
+    (4, "Los Angeles", 34.059753, -118.125),
+    (5, "Fresno", 36.801403, -119.802895),
+    (6, "San Francisco", 37.785587, -122.409645),
+    (7, "Sacramento", 38.558872, -121.54891),
+    (8, "Truckee", 39.191563, -120.20633),
+    (9, "Chico", 39.753952, -121.79416),
+    (10, "Mount Shasta", 41.300526, -122.281204),
+    (11, "Crescent City", 41.722317, -124.2547)
 ]
 
 # API Request Parameters
 url = "https://api.open-meteo.com/v1/forecast"
 params = {
-    "latitude": [lat for _, lat, _ in locations],
-    "longitude": [lon for _, _, lon in locations],
+    "latitude": [lat for _, _, lat, _ in locations],
+    "longitude": [lon for _, _, _, lon in locations],
     "current": [
         "temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day",
         "precipitation", "rain", "showers", "snowfall", "weather_code",
@@ -48,8 +48,8 @@ weather_data = []
 pacific_tz = pytz.timezone("America/Los_Angeles")
 
 for i, response in enumerate(responses):
-    location_id, _, _ = locations[i]
     
+    location_id, city, _, _ = locations[i]
     # Extract current weather data
     current_weather = response.Current()  # Use OpenMeteo SDK method
     timestamp = current_weather.Time()  # This is a Unix timestamp (int)
@@ -62,6 +62,7 @@ for i, response in enumerate(responses):
     # Append weather data to list
     weather_data.append({
         "location_id": location_id,
+        "city": city,
         "time": formatted_time,
         "temperature_2m": current_weather.Variables(0).Value(), #C
         "relative_humidity_2m": current_weather.Variables(1).Value(),#%
@@ -80,8 +81,8 @@ for i, response in enumerate(responses):
         "wind_gusts_10m": current_weather.Variables(14).Value(), #km/h
     })
 
-    # Debugging output
-    print(f"Location ID: {location_id}, Time: {formatted_time}")
+
+    print(f"Location ID: {location_id}, City: {city}, Time: {formatted_time}")
     print(f"Temperature: {current_weather.Variables(0).Value()}°C, Humidity: {current_weather.Variables(1).Value()}%")
     print(f"Wind Speed: {current_weather.Variables(12).Value()} km/h, Wind Direction: {current_weather.Variables(13).Value()}°")
     print("---")
