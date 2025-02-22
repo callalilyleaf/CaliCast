@@ -1,125 +1,144 @@
-import dash
-from dash import dcc, html, Input, Output
-import plotly.express as px
+from shiny import App, ui, render
 import pandas as pd
+from plotnine import ggplot, aes, geom_bar, geom_col, labs, theme_minimal, position_dodge,  geom_point, scale_fill_brewer, scale_fill_gradient, geom_tile
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+from datetime import datetime
+
 
 # Load weather data
 weather_data = pd.read_csv("current_weather_data.csv")
 
-# Initialize Dash app
-app = dash.Dash(__name__)
-app.config.suppress_callback_exceptions = True  # Allows callbacks for dynamically generated components
+# Mapping location_id to city names
+location_map = {
+    0: "San Diego", 1: "Lemoore", 2: "Ramona", 3: "Palm Springs",
+    4: "Los Angeles", 5: "Fresno", 6: "San Francisco", 7: "Sacramento",
+    8: "Truckee", 9: "Chico", 10: "Mount Shasta", 11: "Crescent City"
+}
 
-# Unique locations for dropdown
-unique_locations = weather_data["location_id"].unique()
+weather_data["city"] = weather_data["location_id"].map(location_map)
 
-# Layout of the dashboard with Tabs
-app.layout = html.Div([
-    html.H1("Weather Dashboard", style={'textAlign': 'center'}),
 
-    dcc.Tabs(id="tabs", value="tab1", children=[
-        dcc.Tab(label="Current Weather", value="tab1"),
-        dcc.Tab(label="Historical Data", value="tab2"),
-        dcc.Tab(label="Prediction Model", value="tab3")
-    ]),
-
-    html.Div(id="tab-content")
-])
-
-# Callback to update tab content
-@app.callback(
-    Output("tab-content", "children"),
-    Input("tabs", "value")
-)
-def update_tab(selected_tab):
-    if selected_tab == "tab1":
-        return html.Div([
-            # Temperature Line Graph
-            dcc.Graph(id='temperature-line', 
-                      figure=px.line(weather_data, x="location_id", 
-                                     y=["temperature_2m", "apparent_temperature"],
-                                     title="Current Temperature vs. Feels-Like Temperature",
-                                     labels={"value": "Temperature (°C)", "variable": "Temperature Type", "location_id": "Location ID"},
-                                     markers=True)),
-
-            # Temperature Scatter Plot
-            dcc.Graph(id='temperature-scatter',
-                      figure=px.scatter(weather_data, x="location_id", y="temperature_2m",
-                                        color="temperature_2m",
-                                        size=[10]*len(weather_data),
-                                        title="Current Temperature Scatter Plot",
-                                        labels={"temperature_2m": "Temperature (°C)", "location_id": "Location ID"},
-                                        color_continuous_scale="Oranges")),
-
-            # Humidity Bar Chart
-            dcc.Graph(id='humidity-bar',
-                      figure=px.bar(weather_data, x="location_id", y="relative_humidity_2m",
-                                    color="relative_humidity_2m",
-                                    title="Humidity Levels",
-                                    labels={"relative_humidity_2m": "Humidity (%)", "location_id": "Location ID"},
-                                    color_continuous_scale="Blues")),
-
-            # Dropdown + Wind Rose Graph
-            html.Div([
-                html.Label("Select Location:", style={'display': 'flex', 'justify-self': 'self-end'}),
-                dcc.Dropdown(
-                    id="location-dropdown",
-                    options=[{"label": loc, "value": loc} for loc in unique_locations],
-                    value=unique_locations[0],  
-                    clearable=False,
-                    className="custom-dropdown"
-                )
-            ], id="location-dropdown-container"),
-
-            dcc.Graph(id='wind-rose'),
-
-            # Cloud Cover Bar Chart
-            dcc.Graph(id='cloud-cover-bar',
-                      figure=px.bar(weather_data, x="location_id", y="cloud_cover",
-                                    color="cloud_cover",
-                                    title="Cloud Cover Percentage",
-                                    labels={"cloud_cover": "Cloud Cover (%)", "location_id": "Location ID"},
-                                    color_continuous_scale="gray")),
-
-            # Pressure Bar Chart
-            dcc.Graph(id='pressure-bar',
-                      figure=px.bar(weather_data, x="location_id", y="pressure_msl",
-                                    color="pressure_msl",
-                                    title="Pressure Levels",
-                                    labels={"pressure_msl": "Pressure (hPa)", "location_id": "Location ID"},
-                                    color_continuous_scale="Purples"))
-        ])
+# Define UI with Tabs
+app_ui = ui.page_fluid(
+    ui.h1("Weather Dashboard"),
     
-    elif selected_tab == "tab2":
-        return html.Div([
-            html.H3("Tab 2 content will go here"),
-        ])
+    ui.navset_tab(
+        ui.nav_panel("Current Weather", 
+            ui.h2("Data retrieved at: ", ui.output_text("retrieved_time"),"\n"),
+            ui.h3("Temperature vs Feels-Like"),
+            ui.output_plot("temp_bar_chart"),
+            ui.h3("Humidity"),
+            ui.output_plot("humidity_bar_chart"),
+            ui.h3("Cloud Cover"),
+            ui.output_plot("cloud_coverage_heatmap"),
+            ui.h3("Cloud Cover vs. Humidity"),
+            ui.output_plot("cloud_humidity_scatter"),
+            ui.h3("Wind Speed"),
+            ui.input_select("selected_city", "Select City:", choices=list(weather_data["city"].unique())),
+            ui.output_plot("wind_polar_plot"),
+         
 
-    elif selected_tab == "tab3":
-        return html.Div([
-            html.H3("Tab 3 content will go here"),
-        ])
-
-    return html.Div("No content available.")
-
-# Callback to update Wind Rose chart based on location selection
-@app.callback(
-    Output("wind-rose", "figure"),
-    Input("location-dropdown", "value")
+        ),
+        ui.nav_panel("Historical Data", "This is an empty tab."), 
+        ui.nav_panel("Prediction Model", "This is another empty tab.")  
+    )
 )
-def update_wind_rose(selected_location):
-    filtered_data = weather_data[weather_data["location_id"] == selected_location]
 
-    fig = px.bar_polar(filtered_data, 
-                       r="wind_speed_10m",  
-                       theta="wind_direction_10m",  
-                       color="wind_speed_10m",  
-                       title=f"Wind Speed & Direction for {selected_location}",
-                       labels={"wind_speed_10m": "Wind Speed (km/h)", "wind_direction_10m": "Wind Direction (°)"},
-                       color_continuous_scale="Greens")
+# Convert data to long format for bar grouping by city
+weather_long = weather_data.melt(
+    id_vars=["city"], 
+    value_vars=["temperature_2m", "apparent_temperature"], 
+    var_name="Temperature Type", value_name="Temperature"
+)
+# Server logic
+def server(input, output, session):
 
-    return fig
 
+    @output
+    @render.text
+    def retrieved_time():
+        file_path = "current_weather_data.csv"
+        modified_time = os.path.getmtime(file_path)  # Get last modified time
+        return datetime.fromtimestamp(modified_time).strftime("%Y-%m-%d %H:%M:%S")
+
+    # Temperature Bar Chart (Cities on X-axis)
+    @output
+    @render.plot
+    def temp_bar_chart():
+        return (
+            ggplot(weather_long, aes(x="city", y="Temperature", fill="Temperature Type")) +
+            geom_bar(stat="identity", position=position_dodge()) +
+            scale_fill_brewer(type="qual", palette="Paired") +
+            theme_minimal() +
+            labs(title="Temperature vs Feels-Like by City",
+                 x="City", y="Temperature (°C)")
+        )
+
+     # Humidity Bar Chart
+    @output
+    @render.plot
+    def humidity_bar_chart():
+        return (
+            ggplot(weather_data, aes(x="city", y="relative_humidity_2m", fill="city")) +  
+            geom_col(show_legend=False) +  
+            scale_fill_brewer(type="seq", palette="Greys") +  
+            # scale_fill_brewer(type="qual", palette="Paired") +
+            theme_minimal() +
+            labs(title="Humidity by City", x="City", y="Humidity (%)")
+        )
+    
+    @output
+    @render.plot
+    def cloud_coverage_heatmap():
+        return (
+            ggplot(weather_data, aes(x="city", y="cloud_cover", fill="cloud_cover")) +  
+            geom_col(show_legend=True) +  
+            scale_fill_gradient(low="lightblue", high="darkblue") +  # Adjust colors to your preference
+            labs(title="Cloud Coverage by City", x="City", y="") +
+            theme_minimal()
+        )
+
+    # Scatter Plot for Cloud Cover vs. Humidity
+    @output
+    @render.plot
+    def cloud_humidity_scatter():
+        return (
+            ggplot(weather_data, aes(x="relative_humidity_2m", y="cloud_cover", color="city")) +
+            geom_point(size=3) +
+            labs(title="Cloud Cover vs. Humidity by City",
+                 x="Humidity (%)", y="Cloud Cover (%)") +
+            theme_minimal()
+        )
+    
+
+
+
+    # Wind Rose Chart (Filtered by City)
+    
+    @output
+    @render.plot
+    def wind_polar_plot():
+        # Filter data for selected city
+        df = weather_data[weather_data["city"] == input.selected_city()]
+        
+        if df.empty:
+            return plt.figure()  # Return empty figure if no data
+        
+        # Convert wind direction to radians
+        wind_direction_rad = np.radians(df["wind_direction_10m"])
+        wind_speed = df["wind_speed_10m"]
+
+        # Create polar plot
+        fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+        ax.set_title(f"Wind Speed & Direction for {input.selected_city()}\n \n")
+        
+        ax.scatter(wind_direction_rad, wind_speed, c="blue", alpha=0.7, edgecolors="black")
+        ax.set_theta_zero_location("N")
+        ax.set_theta_direction(-1)
+        
+        
+        return fig
 # Run the app
-if __name__ == '__main__':
-    app.run_server(debug=True)
+app = App(app_ui, server)
