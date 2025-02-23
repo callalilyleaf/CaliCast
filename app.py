@@ -1,10 +1,11 @@
 from shiny import App, ui, render
 import pandas as pd
-from plotnine import ggplot, aes, geom_bar, geom_col, labs, theme_minimal, position_dodge,  geom_point, scale_fill_brewer, scale_fill_gradient, geom_tile
+from plotnine import ggplot, aes, geom_bar, geom_col, labs, theme_minimal, position_dodge,  geom_point, scale_fill_brewer, scale_fill_gradient, geom_tile, geom_line, facet_wrap, scale_x_continuous, theme, element_text
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from datetime import datetime
+from modelfunction import predict_weather_for_locations
 
 
 # Load weather data
@@ -42,7 +43,12 @@ app_ui = ui.page_fluid(
 
         ),
         ui.nav_panel("Historical Data", "This is an empty tab."), 
-        ui.nav_panel("Prediction Model", "This is another empty tab.")  
+        ui.nav_panel("Prediction Model",
+                    ui.h2("Weather Prediction Model"),
+                    ui.output_plot("create_prediction_plots")
+                    
+                     )  
+
     )
 )
 
@@ -73,7 +79,8 @@ def server(input, output, session):
             scale_fill_brewer(type="qual", palette="Paired") +
             theme_minimal() +
             labs(title="Temperature vs Feels-Like by City",
-                 x="City", y="Temperature (°C)")
+                 x="City", y="Temperature (°C)") +
+            theme(axis_text_x = element_text(angle=45, hjust=1))
         )
 
      # Humidity Bar Chart
@@ -86,7 +93,9 @@ def server(input, output, session):
             scale_fill_brewer(type="seq", palette="Greys") +  
             # scale_fill_brewer(type="qual", palette="Paired") +
             theme_minimal() +
-            labs(title="Humidity by City", x="City", y="Humidity (%)")
+            labs(title="Humidity by City", x="City", y="Humidity (%)") +
+            theme(axis_text_x = element_text(angle=45, hjust=1))
+
         )
     
     @output
@@ -97,7 +106,9 @@ def server(input, output, session):
             geom_col(show_legend=True) +  
             scale_fill_gradient(low="lightblue", high="darkblue") +  # Adjust colors to your preference
             labs(title="Cloud Coverage by City", x="City", y="") +
-            theme_minimal()
+            theme_minimal() +
+            theme(axis_text_x = element_text(angle=45, hjust=1))
+
         )
 
     # Scatter Plot for Cloud Cover vs. Humidity
@@ -140,5 +151,67 @@ def server(input, output, session):
         
         
         return fig
+    
+
+    ### These are the functions for the predictions
+    @output
+    @render.plot
+    def create_prediction_plots():
+    
+
+
+        location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
+        df = predict_weather_for_locations(location_ids)
+
+        # Debugging: Print df to see its contents
+        print("DEBUG: DataFrame returned by predict_weather_for_locations:")
+        print(df)
+
+        # Check if df is None
+        if df is None:
+            print("ERROR: predict_weather_for_locations() returned None!")
+            return plt.figure()  # Return an empty plot instead of crashing
+
+        # Check if df is actually a DataFrame
+        if not isinstance(df, pd.DataFrame):
+            print(f"ERROR: Expected DataFrame but got {type(df)} instead!")
+            return plt.figure()
+
+        # Check if DataFrame is empty
+        if df.empty:
+            print("ERROR: DataFrame is empty!")
+            return plt.figure()
+
+        # If df exists and has columns, print them
+        print("Columns in df:", df.columns)
+
+        return (
+            ggplot(df, aes(x="hour_ahead", y="predicted_temperature", color="city")) +
+            geom_line(size=1.5) +
+            labs(title="",
+                 x="Hours Ahead", 
+                 y="Temperature C",
+                 color = "City") +
+            theme_minimal() +
+            facet_wrap('~city', ncol=4) +
+            scale_x_continuous(breaks=range(1, 12, 2))
+        )
+    
+    # @output
+    # @render.data_frame
+    # def display_prediction_table():
+    #     location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
+        
+    #     df = predict_weather_for_locations(location_ids)
+    #     # print(df.head(20))
+        
+    #     return df.head()
+
+
+
+
+
+
+
 # Run the app
 app = App(app_ui, server)

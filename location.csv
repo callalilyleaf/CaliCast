@@ -1,0 +1,13 @@
+location_id,latitude,longitude,elevation,utc_offset_seconds,timezone,timezone_abbreviation,city,county
+0,32.724075,-117.14286,35.0,-28800,America/Los_Angeles,GMT-8,San Diego,San Diego County
+1,32.864674,-114.895966,39.0,-28800,America/Los_Angeles,GMT-8,Lemoore,Kings County
+2,33.07557,-116.646194,24.0,-28800,America/Los_Angeles,GMT-8,Ramona,San Diego County
+3,33.848858,-116.56289,30.0,-28800,America/Los_Angeles,GMT-8,Palm Springs,Riverside County
+4,34.059753,-118.125,20.0,-28800,America/Los_Angeles,GMT-8,Los Angeles,Los Angles County
+5,36.801403,-119.802895,14.0,-28800,America/Los_Angeles,GMT-8,Fresno,Fresno County
+6,37.785587,-122.409645,0.0,-28800,America/Los_Angeles,GMT-8,San Francisco,San Francisco County
+7,38.558872,-121.54891,0.0,-28800,America/Los_Angeles,GMT-8,Sacramento,Sacramento County
+8,39.191563,-120.20633,0.0,-28800,America/Los_Angeles,GMT-8,Truckee,Nevado County
+9,39.753952,-121.79416,24.0,-28800,America/Los_Angeles,GMT-8,Chico,Butte County
+10,41.300526,-122.281204,6.0,-28800,America/Los_Angeles,GMT-8,Mount Shasta,Siskiyou County
+11,41.722317,-124.2547,298.0,-28800,America/Los_Angeles,GMT-8,Crescent City,Del Norte County
