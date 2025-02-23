@@ -34,6 +34,7 @@ Tools Used:
 * matplotlib (additional plotting)
 * numpy (numerical computations)
 * google.cloud.firestore (database integration)
+* XGBoostRegressor (future 12h weather predictions)
 
 ## Useful Websites
 * Shiny for Python Documentation
@@ -45,3 +46,4 @@ Tools Used:
 ## Future Work
 * Improve UI/UX: Enhance the design with better color schemes and animations.
 * More Graphs: Add visualizations for precipitation, UV index, and air quality.
+* Additional ML models to predict more long term weather patterns.
