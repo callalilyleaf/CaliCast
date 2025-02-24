@@ -1,0 +1,10 @@
+#location-dropdown {
+  width: 200px;
+}
+
+#location-dropdown-container {
+  position: relative;
+  top: 130px;
+  left: 5%;
+  z-index: 1;
+}
