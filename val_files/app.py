@@ -43,7 +43,7 @@ app_ui = ui.page_fluid(
     
     ui.navset_tab(
         ui.nav_panel("Current Weather", 
-            ui.h2("Data retrieved at: ", ui.output_text("cur_retrieved_time"),"\n"),
+            ui.h2("Data retrieved at: ", ui.output_text("retrieved_time"),"\n"),
             ui.h3("Temperature vs Feels-Like"),
             ui.output_plot("cur_temp_bar_chart"),
             ui.h3("Humidity"),
@@ -58,7 +58,7 @@ app_ui = ui.page_fluid(
          
 
         ),
-        ui.nav_panel("Historical Data", ui.h2("Data retrieved at: ", ui.output_text("retrieved_time"),"\n"), 
+        ui.nav_panel("Historical Data", 
                      # Historical Data: city, weather_code, temperature, apparent_temperature, wind_speed, cloud_cover, surface_pressure
             ui.h3("Select Dataset"),
             ui.input_action_button("btn_all", "Use All Locations Data"), # choose all/ single locations data
@@ -101,18 +101,19 @@ weather_long = current_weather_data.melt(
 # Server logic
 def server(input, output, session):
     
-    @reactive.calc # dynamical df loading according to user selection with buttons
-    def df():
+    df = reactive.Value(historical_weather_data_all)  # Default
+
+    @reactive.effect
+    def update_df():
         if input.btn_all():
-            return historical_weather_data_all
+            df.set(historical_weather_data_all)
         elif input.btn_single():
-            return historical_weather_data_single
-        return historical_weather_data_all #  Default dataset: all locations
+            df.set(historical_weather_data_single)
 
 
     @output
     @render.text
-    def cur_retrieved_time():
+    def retrieved_time():
         file_path = "current_weather_data.csv"
         modified_time = os.path.getmtime(file_path)  # Get last modified time
         return datetime.fromtimestamp(modified_time).strftime("%Y-%m-%d %H:%M:%S")
@@ -289,78 +290,77 @@ def server(input, output, session):
                 theme(axis_text_x=element_text(angle=45, hjust=1))
                 )
         
-    # # Temperature trends Chart
-    # @output
-    # @render.plot
-    # def his_temp_trend_plots():
-    #     df_choice = df()
-    #     return(
-    #     ggplot(df_choice, aes(x = "city", y = "temperature", group = "city", color = "city")) +
-    #     geom_line(size = 1) +
-    #     geom_point(size = 2) +
-    #     theme_minimal() +
-    #     labs(title = "Temperature Trends Across Locations",
-    #          x = "Location",
-    #          y = "Temperature (°C)") +
-    #     theme(axis_text_x = element_text(angle = 45, hjust = 1))
-    #     )
+    # Temperature trends Chart
+    @output
+    @render.plot
+    def his_temp_trend_plots():
+        df_choice = df()
+        return(
+        ggplot(df_choice, aes(x = "city", y = "temperature", group = "city", color = "city")) +
+        geom_line(size = 1) +
+        geom_point(size = 2) +
+        theme_minimal() +
+        labs(title = "Temperature Trends Across Locations",
+             x = "Location",
+             y = "Temperature (°C)") +
+        theme(axis_text_x = element_text(angle = 45, hjust = 1))
+        )
     
     
 
-    ### These are the functions for the predictions
-    # Ivan: I don't have predict_weather_for_locations file so I comment it out for now
+    ## These are the functions for the predictions
     
-    # @output
-    # @render.plot
-    # def create_prediction_plots():
+    @output
+    @render.plot
+    def create_prediction_plots():
     
 
-    #     location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
-    #     df = predict_weather_for_locations(location_ids)
+        location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
+        df = predict_weather_for_locations(location_ids)
 
-    #     # Debugging: Print df to see its contents
-    #     print("DEBUG: DataFrame returned by predict_weather_for_locations:")
-    #     print(df)
+        # Debugging: Print df to see its contents
+        print("DEBUG: DataFrame returned by predict_weather_for_locations:")
+        print(df)
 
-    #     # Check if df is None
-    #     if df is None:
-    #         print("ERROR: predict_weather_for_locations() returned None!")
-    #         return plt.figure()  # Return an empty plot instead of crashing
+        # Check if df is None
+        if df is None:
+            print("ERROR: predict_weather_for_locations() returned None!")
+            return plt.figure()  # Return an empty plot instead of crashing
 
-    #     # Check if df is actually a DataFrame
-    #     if not isinstance(df, pd.DataFrame):
-    #         print(f"ERROR: Expected DataFrame but got {type(df)} instead!")
-    #         return plt.figure()
+        # Check if df is actually a DataFrame
+        if not isinstance(df, pd.DataFrame):
+            print(f"ERROR: Expected DataFrame but got {type(df)} instead!")
+            return plt.figure()
 
-    #     # Check if DataFrame is empty
-    #     if df.empty:
-    #         print("ERROR: DataFrame is empty!")
-    #         return plt.figure()
+        # Check if DataFrame is empty
+        if df.empty:
+            print("ERROR: DataFrame is empty!")
+            return plt.figure()
 
-    #     # If df exists and has columns, print them
-    #     print("Columns in df:", df.columns)
+        # If df exists and has columns, print them
+        print("Columns in df:", df.columns)
 
-    #     return (
-    #         ggplot(df, aes(x="hour_ahead", y="predicted_temperature", color="city")) +
-    #         geom_line(size=1.5) +
-    #         labs(title="",
-    #              x="Hours Ahead", 
-    #              y="Temperature C",
-    #              color = "City") +
-    #         theme_minimal() +
-    #         facet_wrap('~city', ncol=4) +
-    #         scale_x_continuous(breaks=range(1, 12, 2))
-    #     )
+        return (
+            ggplot(df, aes(x="hour_ahead", y="predicted_temperature", color="city")) +
+            geom_line(size=1.5) +
+            labs(title="",
+                 x="Hours Ahead", 
+                 y="Temperature C",
+                 color = "City") +
+            theme_minimal() +
+            facet_wrap('~city', ncol=4) +
+            scale_x_continuous(breaks=range(1, 12, 2))
+        )
     
-    # @output
-    # @render.data_frame
-    # def display_prediction_table():
-    #     location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
+    @output
+    @render.data_frame
+    def display_prediction_table():
+        location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
         
-    #     df = predict_weather_for_locations(location_ids)
-    #     # print(df.head(20))
+        df = predict_weather_for_locations(location_ids)
+        # print(df.head(20))
         
-    #     return df.head()
+        return df.head()
 
 
 
