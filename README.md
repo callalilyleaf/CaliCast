@@ -33,8 +33,7 @@ Tools Used:
 * plotnine (ggplot-style visualization)
 * matplotlib (additional plotting)
 * numpy (numerical computations)
-* google.cloud.firestore (database integration)
-* XGBoostRegressor (future 12h weather predictions)
+* google.cloud (database integration)
 
 ## Useful Websites
 * Shiny for Python Documentation
