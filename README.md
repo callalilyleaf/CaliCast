@@ -17,7 +17,7 @@ The project utilizes Google Cloud Firestore for storing and retrieving weather d
 Database Structure:
 * historical_weather_data
 * location_id
-
+* current_weather_data
 ## Development Environment
 Tools Used:
 * Google Cloud Firestore (for database)
