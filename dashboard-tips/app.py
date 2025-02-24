@@ -68,22 +68,6 @@ with ui.sidebar(open="desktop"):
             )
             for loc in sorted_locations
         ]
-    # ui.input_slider(
-    #     "total_bill",
-    #     "Bill amount",
-    #     min=bill_rng[0],
-    #     max=bill_rng[1],
-    #     value=bill_rng,
-    #     pre="$",
-    # )
-    # ui.input_checkbox_group(
-    #     "time",
-    #     "Food service",
-    #     ["Lunch", "Dinner"],
-    #     selected=["Lunch", "Dinner"],
-    #     inline=True,
-    # )
-    # ui.input_action_button("reset", "Reset filter")
 
 # Add main content
 ICONS = {
