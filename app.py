@@ -279,7 +279,8 @@ def server(input, output, session):
             scale_fill_brewer(type="qual", palette="Paired") +  # Different colors for the types
             theme_minimal() +
             labs(title="Temperature vs Feels-Like by City",
-            x="City", y="Temperature (°C)")
+            x="City", y="Temperature (°C)") +
+            theme(axis_text_x = element_text(angle=45, hjust=1))
         )
         
 
