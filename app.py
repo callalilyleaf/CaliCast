@@ -6,7 +6,7 @@ import numpy as np
 import os
 from datetime import datetime
 # Ivan: I don't have this file so I will comment it out
-# from modelfunction import predict_weather_for_locations
+from modelfunction import predict_weather_for_locations
 from historical_files.SQLQueryCode import get_weather_sql_df, ALLLOCATIONSHOURLYDATA, SINGLELOCATIONHOURLYDATA, ALLLOCATIONSHOURLYDATA1W, ALLLOCATIONSHOURLYDATA1M, ALLLOCATIONSHOURLYDATA6M, ALLLOCATIONSHOURLYDATA1Y
 
 # To-dos: 
@@ -367,47 +367,47 @@ def server(input, output, session):
 
     ## These are the functions for the predictions
     
-    # @output
-    # @render.plot
-    # def create_prediction_plots():
+    @output
+    @render.plot
+    def create_prediction_plots():
     
 
-    #     location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
-    #     df = predict_weather_for_locations(location_ids)
+        location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
+        df = predict_weather_for_locations(location_ids)
 
-    #     # Debugging: Print df to see its contents
-    #     print("DEBUG: DataFrame returned by predict_weather_for_locations:")
-    #     print(df)
+        # Debugging: Print df to see its contents
+        print("DEBUG: DataFrame returned by predict_weather_for_locations:")
+        print(df)
 
-    #     # Check if df is None
-    #     if df is None:
-    #         print("ERROR: predict_weather_for_locations() returned None!")
-    #         return plt.figure()  # Return an empty plot instead of crashing
+        # Check if df is None
+        if df is None:
+            print("ERROR: predict_weather_for_locations() returned None!")
+            return plt.figure()  # Return an empty plot instead of crashing
 
-    #     # Check if df is actually a DataFrame
-    #     if not isinstance(df, pd.DataFrame):
-    #         print(f"ERROR: Expected DataFrame but got {type(df)} instead!")
-    #         return plt.figure()
+        # Check if df is actually a DataFrame
+        if not isinstance(df, pd.DataFrame):
+            print(f"ERROR: Expected DataFrame but got {type(df)} instead!")
+            return plt.figure()
 
-    #     # Check if DataFrame is empty
-    #     if df.empty:
-    #         print("ERROR: DataFrame is empty!")
-    #         return plt.figure()
+        # Check if DataFrame is empty
+        if df.empty:
+            print("ERROR: DataFrame is empty!")
+            return plt.figure()
 
-    #     # If df exists and has columns, print them
-    #     print("Columns in df:", df.columns)
+        # If df exists and has columns, print them
+        print("Columns in df:", df.columns)
 
-    #     return (
-    #         ggplot(df, aes(x="hour_ahead", y="predicted_temperature", color="city")) +
-    #         geom_line(size=1.5) +
-    #         labs(title="",
-    #              x="Hours Ahead", 
-    #              y="Temperature C",
-    #              color = "City") +
-    #         theme_minimal() +
-    #         facet_wrap('~city', ncol=4) +
-    #         scale_x_continuous(breaks=range(1, 12, 2))
-    #     )
+        return (
+            ggplot(df, aes(x="hour_ahead", y="predicted_temperature", color="city")) +
+            geom_line(size=1.5) +
+            labs(title="",
+                 x="Hours Ahead", 
+                 y="Temperature C",
+                 color = "City") +
+            theme_minimal() +
+            facet_wrap('~city', ncol=4) +
+            scale_x_continuous(breaks=range(1, 12, 2))
+        )
     
     # @output
     # @render.data_frame
