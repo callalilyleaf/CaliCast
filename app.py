@@ -1,15 +1,33 @@
-from shiny import App, ui, render
+from shiny import App, ui, render, reactive
 import pandas as pd
-from plotnine import ggplot, aes, geom_bar, geom_col, labs, theme_minimal, position_dodge,  geom_point, scale_fill_brewer, scale_fill_gradient, geom_tile, geom_line, facet_wrap, scale_x_continuous, theme, element_text
+from plotnine import ggplot, aes, geom_bar, geom_col, labs, theme_minimal, position_dodge,  geom_point, scale_fill_brewer, scale_fill_gradient, geom_tile, geom_line, facet_wrap, scale_x_continuous, scale_x_datetime, theme, element_text, geom_boxplot
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from datetime import datetime
-from modelfunction import predict_weather_for_locations
+# Ivan: I don't have this file so I will comment it out
+# from modelfunction import predict_weather_for_locations
+from historical_files.SQLQueryCode import get_weather_sql_df, ALLLOCATIONSHOURLYDATA, SINGLELOCATIONHOURLYDATA, ALLLOCATIONSHOURLYDATA1W, ALLLOCATIONSHOURLYDATA1M, ALLLOCATIONSHOURLYDATA6M, ALLLOCATIONSHOURLYDATA1Y
+
+# To-dos: 
+# 1. Find the way to load current df, all & single location dfs
+# 2. Put the ggplots for each of the historical category (display all)  
+# (Stretches: )
+# 3. Have buttons/ drop down list for user to choose which category to deplay and for multiple locations or the trends of a single one
+# 4. Have various buttons that get data from different time frame: 1 week, 1 month, 3 months, 6 months, customerized
 
 
-# Load weather data
-weather_data = pd.read_csv("current_weather_data.csv")
+# Load weather data dfs
+current_weather_data = pd.read_csv("current_weather_data.csv")
+historical_weather_data_all = get_weather_sql_df(ALLLOCATIONSHOURLYDATA)
+historical_weather_data_single = get_weather_sql_df(SINGLELOCATIONHOURLYDATA)
+historical_weather_data_1w = get_weather_sql_df(ALLLOCATIONSHOURLYDATA1W)
+historical_weather_data_1m = get_weather_sql_df(ALLLOCATIONSHOURLYDATA1M)
+historical_weather_data_6m = get_weather_sql_df(ALLLOCATIONSHOURLYDATA6M)
+historical_weather_data_1y = get_weather_sql_df(ALLLOCATIONSHOURLYDATA1Y)
+
+
+
 
 # Mapping location_id to city names
 location_map = {
@@ -18,7 +36,18 @@ location_map = {
     8: "Truckee", 9: "Chico", 10: "Mount Shasta", 11: "Crescent City"
 }
 
-weather_data["city"] = weather_data["location_id"].map(location_map)
+# Current weather data df set up
+current_weather_data["city"] = current_weather_data["location_id"].map(location_map)
+
+# Historical weather data df set up
+historical_weather_data_all["city"] = historical_weather_data_all["location_id"].map(location_map)
+historical_weather_data_single["city"] = historical_weather_data_single["location_id"].map(location_map)
+historical_weather_data_1w["city"] = historical_weather_data_1w["location_id"].map(location_map)
+historical_weather_data_1m["city"] = historical_weather_data_1m["location_id"].map(location_map)
+historical_weather_data_6m["city"] = historical_weather_data_6m["location_id"].map(location_map)
+historical_weather_data_1y["city"] = historical_weather_data_1y["location_id"].map(location_map)
+
+
 
 
 # Define UI with Tabs
@@ -29,37 +58,97 @@ app_ui = ui.page_fluid(
         ui.nav_panel("Current Weather", 
             ui.h2("Data retrieved at: ", ui.output_text("retrieved_time"),"\n"),
             ui.h3("Temperature vs Feels-Like"),
-            ui.output_plot("temp_bar_chart"),
+            ui.output_plot("cur_temp_bar_chart"),
             ui.h3("Humidity"),
-            ui.output_plot("humidity_bar_chart"),
+            ui.output_plot("cur_humidity_bar_chart"),
             ui.h3("Cloud Cover"),
-            ui.output_plot("cloud_coverage_heatmap"),
+            ui.output_plot("cur_cloud_coverage_heatmap"),
             ui.h3("Cloud Cover vs. Humidity"),
-            ui.output_plot("cloud_humidity_scatter"),
+            ui.output_plot("cur_cloud_humidity_scatter"),
             ui.h3("Wind Speed"),
-            ui.input_select("selected_city", "Select City:", choices=list(weather_data["city"].unique())),
-            ui.output_plot("wind_polar_plot"),
+            ui.input_select("selected_city", "Select City:", choices=list(current_weather_data["city"].unique())),
+            ui.output_plot("cur_wind_polar_plot"),
          
 
         ),
-        ui.nav_panel("Historical Data", "This is an empty tab."), 
+        ui.nav_panel("Historical Data", 
+            # Historical Data: city, weather_code, temperature, apparent_temperature, wind_speed, cloud_cover, surface_pressure
+            # ui.input_action_button("btn_all", "Use All Locations Data"), # choose all/ single locations data
+            # ui.input_action_button("btn_single", "Use Single Location Data"),
+            ui.h3("Select Dataset"),
+            ui.input_select(
+                "time_frame",
+                "Select Time Frame",
+                {
+                    "1W": "Past 1 Week",
+                    "1M": "Past 1 Month",
+                    "6M": "Past 6 Months",
+                    "1Y": "Past Year",
+                }
+            ),
+            
+            ui.h3("Temperature Trends"),
+            ui.output_plot("his_temp_line_chart"),
+            ui.h3("Temperature vs Feels-Like"),
+            ui.output_plot("his_temp_bar_chart"),
+            ui.h3("Humidity"),
+            ui.output_plot("his_humidity_bar_chart"),
+            ui.h3("Cloud Cover"),
+            ui.output_plot("his_cloud_coverage_heatmap"),
+            ui.h3("Humidity v.s. Cloud Cover"),
+            ui.output_plot("his_humidity_vs_cloud_cover_chart"),
+            ui.h3("Weather Condition Frequency"),
+            ui.output_plot("his_weather_code_frequency"),
+            ui.h3("Wind Speed"),
+            ui.output_plot("his_wind_speed_chart"),        
+        ), 
+        
         ui.nav_panel("Prediction Model",
                     ui.h2("Weather Prediction Model"),
                     ui.output_plot("create_prediction_plots")
                     
-                     )  
+                    )  
 
     )
 )
 
-# Convert data to long format for bar grouping by city
-weather_long = weather_data.melt(
-    id_vars=["city"], 
-    value_vars=["temperature_2m", "apparent_temperature"], 
-    var_name="Temperature Type", value_name="Temperature"
-)
+# Based on different user choice, return different graphs
+# selected_mode = reactive.Val("all")  # Default to "all" locations
+
 # Server logic
 def server(input, output, session):
+    
+    # Set up the df according to user choice
+    df = reactive.Value(historical_weather_data_all)  # Default
+    @reactive.effect
+    def update_df():
+        time_selection = input.time_frame()
+        if time_selection == "1W":
+            df.set(historical_weather_data_1w)
+        elif time_selection == "1M":
+            df.set(historical_weather_data_1m)
+        elif time_selection == "6M":
+            df.set(historical_weather_data_6m)
+        else:
+            df.set(historical_weather_data_1y)
+
+
+    # # Set up All/Single location based on user choice
+    # @reactive.effect
+    # @reactive.event(input.btn_all, input.btn_single)
+    # def update_location_mode():
+    #     if input.btn_all():
+    #         selected_mode.set("all")
+    #     elif input.btn_single():
+    #         selected_mode.set("single")
+            
+    # @output
+    # @render.text
+    # def location_mode():
+    #     if selected_mode.get() == "all":
+    #         return "Using All Locations Data"
+    #     else:
+    #         return "Using Single Location Data"
 
 
     @output
@@ -72,23 +161,29 @@ def server(input, output, session):
     # Temperature Bar Chart (Cities on X-axis)
     @output
     @render.plot
-    def temp_bar_chart():
+    def cur_temp_bar_chart():
+        # Convert data to long format for bar grouping by city
+        weather_long = current_weather_data.melt(
+        id_vars=["city"], 
+        value_vars=["temperature_2m", "apparent_temperature"], 
+        var_name="Temperature Type", value_name="Temperature"
+        )
+        
         return (
             ggplot(weather_long, aes(x="city", y="Temperature", fill="Temperature Type")) +
             geom_bar(stat="identity", position=position_dodge()) +
             scale_fill_brewer(type="qual", palette="Paired") +
             theme_minimal() +
             labs(title="Temperature vs Feels-Like by City",
-                 x="City", y="Temperature (°C)") +
-            theme(axis_text_x = element_text(angle=45, hjust=1))
+                 x="City", y="Temperature (°C)")
         )
 
      # Humidity Bar Chart
     @output
     @render.plot
-    def humidity_bar_chart():
+    def cur_humidity_bar_chart():
         return (
-            ggplot(weather_data, aes(x="city", y="relative_humidity_2m", fill="city")) +  
+            ggplot(current_weather_data, aes(x="city", y="relative_humidity_2m", fill="city")) +  
             geom_col(show_legend=False) +  
             scale_fill_brewer(type="seq", palette="Greys") +  
             # scale_fill_brewer(type="qual", palette="Paired") +
@@ -98,11 +193,12 @@ def server(input, output, session):
 
         )
     
+    # cloud coverage
     @output
     @render.plot
-    def cloud_coverage_heatmap():
+    def cur_cloud_coverage_heatmap():
         return (
-            ggplot(weather_data, aes(x="city", y="cloud_cover", fill="cloud_cover")) +  
+            ggplot(current_weather_data, aes(x="city", y="cloud_cover", fill="cloud_cover")) +  
             geom_col(show_legend=True) +  
             scale_fill_gradient(low="lightblue", high="darkblue") +  # Adjust colors to your preference
             labs(title="Cloud Coverage by City", x="City", y="") +
@@ -114,25 +210,24 @@ def server(input, output, session):
     # Scatter Plot for Cloud Cover vs. Humidity
     @output
     @render.plot
-    def cloud_humidity_scatter():
+    def cur_cloud_humidity_scatter():
+       
         return (
-            ggplot(weather_data, aes(x="relative_humidity_2m", y="cloud_cover", color="city")) +
+            ggplot(current_weather_data, aes(x="relative_humidity_2m", y="cloud_cover", color="city")) +
             geom_point(size=3) +
             labs(title="Cloud Cover vs. Humidity by City",
                  x="Humidity (%)", y="Cloud Cover (%)") +
             theme_minimal()
         )
-    
-
-
 
     # Wind Rose Chart (Filtered by City)
-    
     @output
     @render.plot
-    def wind_polar_plot():
+    def cur_wind_polar_plot():
         # Filter data for selected city
-        df = weather_data[weather_data["city"] == input.selected_city()]
+        
+        # To be edified: make the column name the same as the historical dfs
+        df = current_weather_data[current_weather_data["city"] == input.selected_city()]
         
         if df.empty:
             return plt.figure()  # Return empty figure if no data
@@ -152,50 +247,166 @@ def server(input, output, session):
         
         return fig
     
-
-    ### These are the functions for the predictions
+    ### These are the functions for the historical Charts
+    # Bar Chart for temperature trends
     @output
     @render.plot
-    def create_prediction_plots():
+    def his_temp_line_chart():
+        df_choice = df.get()
+        return(
+            ggplot(df_choice, aes(x="observation_date", y="temperature", color="city")) +  
+            geom_line(size=1) +  
+            labs(title="Temperature Trends Over Time", x="Date", y="Temperature (°C)") +  
+            theme_minimal() +  
+            facet_wrap('~city', scales="free_x") +  # Separate plots per city
+            scale_x_datetime(date_breaks="1 month", date_labels="%b %Y")
+        )
+    
+    # Temperature Bar Chart for comparing different cities at the same time(Cities on X-axis)
+    @output
+    @render.plot
+    def his_temp_bar_chart():
+        df_choice = df.get()
+        
+        df_melted = df_choice.melt(id_vars=["city"], 
+                               value_vars=["temperature", "apparent_temperature"], 
+                               var_name="Temperature Type", 
+                               value_name="Temperature")
+        
+        return (
+            ggplot(df_melted, aes(x="city", y="Temperature", fill="Temperature Type")) +
+            geom_bar(stat="identity", position=position_dodge()) +  # Side-by-side bars
+            scale_fill_brewer(type="qual", palette="Paired") +  # Different colors for the types
+            theme_minimal() +
+            labs(title="Temperature vs Feels-Like by City",
+            x="City", y="Temperature (°C)")
+        )
+        
+
+    # Humidity Bar Chart
+    @output
+    @render.plot
+    def his_humidity_bar_chart():
+        df_choice = df.get()
+        return (
+            ggplot(df_choice, aes(x="city", y="humidity", fill="city")) +  
+            geom_col(show_legend=False) +  
+            scale_fill_brewer(type="seq", palette="Greys") +  
+            # scale_fill_brewer(type="qual", palette="Paired") +
+            theme_minimal() +
+            labs(title="Humidity by City", x="City", y="Humidity (%)") +
+            theme(axis_text_x = element_text(angle=45, hjust=1))
+        )
+        
+    # Humidity vs cloud cover Chart
+    @output
+    @render.plot
+    def his_humidity_vs_cloud_cover_chart():
+        df_choice = df.get()
+        return(
+            ggplot(df_choice, aes(x="humidity", y="cloud_cover", color="city")) +  
+            geom_point(size=3, alpha=0.7) +  
+            labs(title="Humidity vs. Cloud Cover", x="Humidity (%)", y="Cloud Cover (%)") +  
+            theme_minimal()
+        )
+    
+    # Weather Code Frequency (Bar Chart)
+    @output
+    @render.plot
+    def his_weather_code_frequency():
+        df_choice = df.get()
+        return (ggplot(df_choice, aes(x="weather_code", fill="city")) +  
+                geom_bar(position="dodge") +  
+                labs(title="Weather Code Frequency", x="Weather Code", y="Count") +  
+                theme_minimal()
+                )
+    
+    @output
+    @render.plot
+    def his_cloud_coverage_heatmap():
+        df_choice = df.get()
+        return (
+            ggplot(df_choice, aes(x="city", y="cloud_cover", fill="cloud_cover")) +  
+            geom_col(show_legend=True) +  
+            scale_fill_gradient(low="lightblue", high="darkblue") +  # Adjust colors to your preference
+            labs(title="Cloud Coverage by City", x="City", y="") +
+            theme_minimal() +
+            theme(axis_text_x = element_text(angle=45, hjust=1))
+
+        )
+        
+    @output
+    @render.plot
+    def his_wind_speed_chart():
+        df_choice = df.get()
+        return (ggplot(df_choice, aes(x="city", y="wind_speed", fill="city")) +  
+                geom_boxplot() +  
+                labs(title="Wind Speed Distribution by City", x="City", y="Wind Speed (m/s)") +  
+                theme_minimal() +  
+                theme(axis_text_x=element_text(angle=45, hjust=1))
+                )
+        
+    # Temperature trends Chart
+    @output
+    @render.plot
+    def his_temp_trend_plots():
+        df_choice = df.get()
+        return(
+        ggplot(df_choice, aes(x = "city", y = "temperature", group = "city", color = "city")) +
+        geom_line(size = 1) +
+        geom_point(size = 2) +
+        theme_minimal() +
+        labs(title = "Temperature Trends Across Locations",
+             x = "Location",
+             y = "Temperature (°C)") +
+        theme(axis_text_x = element_text(angle = 45, hjust = 1))
+        )
+    
     
 
+    ## These are the functions for the predictions
+    
+    # @output
+    # @render.plot
+    # def create_prediction_plots():
+    
 
-        location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
-        df = predict_weather_for_locations(location_ids)
+    #     location_ids = [0,1,2,3,4,5,6,7,8,9,10,11]
+    #     df = predict_weather_for_locations(location_ids)
 
-        # Debugging: Print df to see its contents
-        print("DEBUG: DataFrame returned by predict_weather_for_locations:")
-        print(df)
+    #     # Debugging: Print df to see its contents
+    #     print("DEBUG: DataFrame returned by predict_weather_for_locations:")
+    #     print(df)
 
-        # Check if df is None
-        if df is None:
-            print("ERROR: predict_weather_for_locations() returned None!")
-            return plt.figure()  # Return an empty plot instead of crashing
+    #     # Check if df is None
+    #     if df is None:
+    #         print("ERROR: predict_weather_for_locations() returned None!")
+    #         return plt.figure()  # Return an empty plot instead of crashing
 
-        # Check if df is actually a DataFrame
-        if not isinstance(df, pd.DataFrame):
-            print(f"ERROR: Expected DataFrame but got {type(df)} instead!")
-            return plt.figure()
+    #     # Check if df is actually a DataFrame
+    #     if not isinstance(df, pd.DataFrame):
+    #         print(f"ERROR: Expected DataFrame but got {type(df)} instead!")
+    #         return plt.figure()
 
-        # Check if DataFrame is empty
-        if df.empty:
-            print("ERROR: DataFrame is empty!")
-            return plt.figure()
+    #     # Check if DataFrame is empty
+    #     if df.empty:
+    #         print("ERROR: DataFrame is empty!")
+    #         return plt.figure()
 
-        # If df exists and has columns, print them
-        print("Columns in df:", df.columns)
+    #     # If df exists and has columns, print them
+    #     print("Columns in df:", df.columns)
 
-        return (
-            ggplot(df, aes(x="hour_ahead", y="predicted_temperature", color="city")) +
-            geom_line(size=1.5) +
-            labs(title="",
-                 x="Hours Ahead", 
-                 y="Temperature C",
-                 color = "City") +
-            theme_minimal() +
-            facet_wrap('~city', ncol=4) +
-            scale_x_continuous(breaks=range(1, 12, 2))
-        )
+    #     return (
+    #         ggplot(df, aes(x="hour_ahead", y="predicted_temperature", color="city")) +
+    #         geom_line(size=1.5) +
+    #         labs(title="",
+    #              x="Hours Ahead", 
+    #              y="Temperature C",
+    #              color = "City") +
+    #         theme_minimal() +
+    #         facet_wrap('~city', ncol=4) +
+    #         scale_x_continuous(breaks=range(1, 12, 2))
+    #     )
     
     # @output
     # @render.data_frame
