@@ -1,0 +1,12 @@
+{
+    "https://api.shinyapps.io": {
+        "server_url": "https://api.shinyapps.io",
+        "filename": "C:\\Users\\calla\\\u684c\u9762\\programming\\Academic\\CSE 310 Applied Programming\\CaliCast\\dashboard-tips",
+        "app_url": "https://ivancheng.shinyapps.io/dashboard-tips/",
+        "app_id": 14043938,
+        "app_guid": null,
+        "title": "dashboard-tips",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}
